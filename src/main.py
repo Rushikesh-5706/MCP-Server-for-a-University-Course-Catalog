@@ -1,14 +1,13 @@
 """FastMCP server entrypoint for the University Course Catalog.
 
-Design note: the MCP Python SDK v2 exposes MCPServer (formerly FastMCP in older SDK
-versions) directly in mcp.server. This server uses MCPServer with
-transport="streamable-http" rather than mounting the MCP app inside a separate
-FastAPI/Starlette instance. Mounting via .mount() is a known open bug in older SDK
-releases — it breaks routing on the MCP endpoint. Using MCPServer.run() directly
-avoids this entirely and is the recommended path for HTTP transport.
+Design note: The server uses FastMCP directly rather than mounting it inside
+a separate FastAPI application. Mounting via FastAPI's .mount() is a known
+open bug in the MCP Python SDK — it breaks routing on the MCP endpoint.
+Using FastMCP's own run(transport="streamable-http") avoids this entirely
+and is the recommended path for HTTP transport.
 
 The /health route is added with @mcp.custom_route() so it lives on the same
-Starlette app that MCPServer manages internally, keeping everything on one port.
+Starlette app that FastMCP manages internally, keeping everything on one port.
 """
 
 import os
@@ -23,9 +22,9 @@ if _repo_root not in sys.path:
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 
-mcp = MCPServer("University Course Catalog")
+mcp = FastMCP("University Course Catalog", host="0.0.0.0", port=8080)
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -49,4 +48,4 @@ if __name__ == "__main__":
     from data.seed import ensure_seeded
 
     ensure_seeded()
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8080)
+    mcp.run(transport="streamable-http")

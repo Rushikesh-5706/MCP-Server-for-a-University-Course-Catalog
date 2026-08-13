@@ -11,7 +11,7 @@ graph LR
     Client["MCP Client (LLM / Inspector)"]
 
     subgraph Docker["Docker Container (port 8080)"]
-        subgraph Server["FastMCP / MCPServer"]
+        subgraph Server["FastMCP"]
             T["Tools\nsearch_courses\nget_prerequisites\nlookup_instructor\nget_prerequisite_graph"]
             R["Resources\ncourse_descriptions\ndepartment_directory"]
             P["Prompts\ncourse_comparison_template"]
@@ -34,7 +34,7 @@ graph LR
 | Component | Library / Tool |
 |---|---|
 | Language | Python 3.12 |
-| MCP layer | `mcp` 2.0.0 (MCPServer, streamable-http transport) |
+| MCP layer | `mcp` < 2.0.0 (FastMCP, streamable-http transport) |
 | ORM | SQLAlchemy 2 |
 | Validation | Pydantic v2 |
 | Graph traversal | NetworkX |
@@ -59,7 +59,7 @@ graph LR
 │   └── seed.py
 ├── src/
 │   ├── __init__.py
-│   ├── main.py             # MCPServer instance, health route, entrypoint
+│   ├── main.py             # FastMCP instance, health route, entrypoint
 │   ├── database.py         # SQLAlchemy engine/session/Base
 │   ├── models.py           # Department, Instructor, Course, Prerequisite ORM models
 │   ├── schemas.py          # Pydantic input/output models for all 4 tools
@@ -188,9 +188,9 @@ These are the kinds of natural-language questions a connected LLM could answer u
 
 ---
 
-## Design Note: MCPServer over FastAPI
+## Design Note: FastMCP over FastAPI
 
-The server uses `MCPServer` from the MCP Python SDK directly, running with `transport="streamable-http"`. I did not mount the MCP app inside a separate FastAPI application. Doing so (via FastAPI's `.mount()` applied to `mcp.streamable_http_app()`) is a known routing bug in older SDK releases where the MCP endpoint stops responding correctly after mounting. Using `MCPServer.run()` with its built-in Uvicorn runner avoids the issue entirely — the health endpoint is added with `@mcp.custom_route("/health")`, which registers it on the same Starlette app that MCPServer manages internally. One port, one process, no wrapper.
+The server uses `FastMCP` from the MCP Python SDK directly, running with `transport="streamable-http"`. I did not mount the MCP app inside a separate FastAPI application. Doing so (via FastAPI's `.mount()` applied to `mcp.streamable_http_app()`) is a known routing bug in the SDK where the MCP endpoint stops responding correctly after mounting. Using `FastMCP.run()` with its built-in Uvicorn runner avoids the issue entirely — the health endpoint is added with `@mcp.custom_route("/health")`, which registers it on the same Starlette app that FastMCP manages internally. One port, one process, no wrapper.
 
 ---
 

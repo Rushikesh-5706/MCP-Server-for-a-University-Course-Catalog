@@ -47,7 +47,7 @@ async def verify_health() -> None:
 
 
 async def verify_all() -> None:
-    async with streamable_http_client(MCP_URL) as (r, w):
+    async with streamable_http_client(MCP_URL) as (r, w, _):
         async with ClientSession(r, w) as session:
             await session.initialize()
 
