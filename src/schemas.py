@@ -7,6 +7,7 @@ not as FastMCP parameter schemas (FastMCP reads function signatures for that).
 from pydantic import BaseModel
 
 
+
 # ── search_courses ──────────────────────────────────────────────────────────
 
 
@@ -34,8 +35,9 @@ class PrerequisiteItem(BaseModel):
 
 
 class PrerequisitesResult(BaseModel):
-    course_code: str
-    prerequisites: list[PrerequisiteItem]
+    course_code: str | None = None
+    prerequisites: list[PrerequisiteItem] | None = None
+    error: str | None = None
 
 
 # ── lookup_instructor ───────────────────────────────────────────────────────
@@ -46,9 +48,10 @@ class LookupInstructorInput(BaseModel):
 
 
 class InstructorResult(BaseModel):
-    name: str
-    email: str
-    department_name: str
+    name: str | None = None
+    email: str | None = None
+    department_name: str | None = None
+    error: str | None = None
 
 
 # ── get_prerequisite_graph ──────────────────────────────────────────────────
@@ -68,5 +71,6 @@ class GraphEdge(BaseModel):
 
 
 class PrerequisiteGraphResult(BaseModel):
-    nodes: list[GraphNode]
-    edges: list[GraphEdge]
+    nodes: list[GraphNode] | None = None
+    edges: list[GraphEdge] | None = None
+    error: str | None = None

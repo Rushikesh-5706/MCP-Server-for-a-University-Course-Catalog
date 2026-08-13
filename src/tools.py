@@ -8,7 +8,7 @@ Tools are registered onto the `mcp` instance imported from src.main. The import
 of this module in main.py is what triggers registration (decorator side-effects).
 """
 
-from __future__ import annotations
+
 
 import networkx as nx
 from sqlalchemy import func
@@ -21,6 +21,7 @@ from src.schemas import (
     GetPrerequisitesInput,
     GraphEdge,
     GraphNode,
+    InstructorResult,
     LookupInstructorInput,
     PrerequisiteGraphResult,
     PrerequisiteItem,
@@ -72,10 +73,10 @@ def register_tools(mcp) -> None:
             session.close()
 
     @mcp.tool()
-    def get_prerequisites(course_code: str) -> dict:
+    def get_prerequisites(course_code: str) -> PrerequisitesResult:
         """Return the direct prerequisites for a course.
 
-        Returns an error dict if the course_code is not found.
+        Returns a PrerequisitesResult with an error field set if the course_code is not found.
         Returns an empty prerequisites list for courses with no prerequisites.
         """
         validated = GetPrerequisitesInput(course_code=course_code)
@@ -91,7 +92,7 @@ def register_tools(mcp) -> None:
                 .first()
             )
             if course is None:
-                return {"error": "Course not found"}
+                return PrerequisitesResult(error="Course not found")
 
             prereq_rows = (
                 session.query(Prerequisite)
@@ -115,15 +116,15 @@ def register_tools(mcp) -> None:
             return PrerequisitesResult(
                 course_code=course.course_code,
                 prerequisites=prereq_items,
-            ).model_dump()
+            )
         finally:
             session.close()
 
     @mcp.tool()
-    def lookup_instructor(instructor_name: str) -> dict:
+    def lookup_instructor(instructor_name: str) -> InstructorResult:
         """Return contact and department info for an instructor by name (case-insensitive).
 
-        Returns an error dict if no instructor matches.
+        Returns an InstructorResult with error field set if no instructor matches.
         """
         validated = LookupInstructorInput(instructor_name=instructor_name)
 
@@ -139,26 +140,27 @@ def register_tools(mcp) -> None:
                 .first()
             )
             if instructor is None:
-                return {"error": "Instructor not found"}
+                return InstructorResult(error="Instructor not found")
 
             dept = session.query(Department).filter(
                 Department.id == instructor.department_id
             ).first()
 
-            return {
-                "name": instructor.name,
-                "email": instructor.email,
-                "department_name": dept.name if dept else "",
-            }
+            return InstructorResult(
+                name=instructor.name,
+                email=instructor.email,
+                department_name=dept.name if dept else "",
+            )
         finally:
             session.close()
 
     @mcp.tool()
-    def get_prerequisite_graph(course_code: str) -> dict:
+    def get_prerequisite_graph(course_code: str) -> PrerequisiteGraphResult:
         """Build and return the full transitive prerequisite graph for a course.
 
         Uses NetworkX to compute ancestors. Edges run source→target where source
-        is a prerequisite of target. Returns an error dict for unknown courses.
+        is a prerequisite of target. Returns a PrerequisiteGraphResult with error
+        field set for unknown courses.
         """
         validated = GetPrerequisiteGraphInput(course_code=course_code)
 
@@ -173,7 +175,7 @@ def register_tools(mcp) -> None:
                 .first()
             )
             if root is None:
-                return {"error": "Course not found"}
+                return PrerequisiteGraphResult(error="Course not found")
 
             # Load all prerequisite edges from the DB into a directed graph.
             # Edge direction: prerequisite_id → course_id  (prereq is required for course)
@@ -199,12 +201,12 @@ def register_tools(mcp) -> None:
             # Subgraph restricted to relevant nodes
             sub = G.subgraph(relevant_nodes)
 
-            nodes = [GraphNode(id=n).model_dump() for n in sub.nodes()]
+            nodes = [GraphNode(id=n) for n in sub.nodes()]
             edges = [
-                GraphEdge(source=u, target=v).model_dump()
+                GraphEdge(source=u, target=v)
                 for u, v in sub.edges()
             ]
 
-            return PrerequisiteGraphResult(nodes=nodes, edges=edges).model_dump()
+            return PrerequisiteGraphResult(nodes=nodes, edges=edges)
         finally:
             session.close()
